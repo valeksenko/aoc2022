@@ -7,12 +7,15 @@ defmodule AoC2022.Day01.Part1 do
   @impl AoC2022.Day
   def run(data) do
     data
-    |> Enum.reduce([[]], &parse/2)
+    |> String.split("\n\n")
+    |> Enum.map(&parse/1)
     |> Enum.map(&Enum.sum/1)
     |> Enum.max
   end
 
-  defp parse(input, [current | parsed]) do
-    if input == "", do: [[] | [current | parsed]], else: [[String.to_integer(input) | current] | parsed]
+  defp parse(input) do
+    input
+    |> String.split
+    |> Enum.map(&String.to_integer/1)
   end
 end
