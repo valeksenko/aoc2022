@@ -4,7 +4,7 @@ defmodule AoC2022.Day02.Part1 do
   """
   @behaviour AoC2022.Day
 
-  @items %{
+  @guide %{
     "A" => :rock,
     "B" => :paper,
     "C" => :scissors,
@@ -30,7 +30,7 @@ defmodule AoC2022.Day02.Part1 do
   defp parse(input) do
     input
     |> String.split
-    |> Enum.map(fn v -> @items[v] end)
+    |> Enum.map(fn v -> @guide[v] end)
   end
 
   defp play([player1, player2]) do
