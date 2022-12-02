@@ -10,12 +10,12 @@ defmodule AoC2022.Day01.Part1 do
     |> String.split("\n\n")
     |> Enum.map(&parse/1)
     |> Enum.map(&Enum.sum/1)
-    |> Enum.max
+    |> Enum.max()
   end
 
   defp parse(input) do
     input
-    |> String.split
+    |> String.split()
     |> Enum.map(&String.to_integer/1)
   end
 end

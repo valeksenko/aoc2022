@@ -27,12 +27,12 @@ defmodule AoC2022.Day02.Part2 do
     data
     |> Enum.map(&parse/1)
     |> Enum.map(&play/1)
-    |> Enum.sum
+    |> Enum.sum()
   end
 
   defp parse(input) do
     input
-    |> String.split
+    |> String.split()
     |> Enum.map(fn v -> @guide[v] end)
   end
 

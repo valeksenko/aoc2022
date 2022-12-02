@@ -12,12 +12,12 @@ defmodule AoC2022.Day01.Part2 do
     |> Enum.map(&Enum.sum/1)
     |> Enum.sort(:desc)
     |> Enum.take(3)
-    |> Enum.sum
+    |> Enum.sum()
   end
 
   defp parse(input) do
     input
-    |> String.split
+    |> String.split()
     |> Enum.map(&String.to_integer/1)
   end
 end
