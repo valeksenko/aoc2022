@@ -1,6 +1,6 @@
 defmodule AoC2022.Day03.Part2 do
   @moduledoc """
-    @see https://adventofcode.com/2022/day/3
+    @see https://adventofcode.com/2022/day/3#part2
   """
   @behaviour AoC2022.Day
 
