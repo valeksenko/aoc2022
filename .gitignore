@@ -24,3 +24,6 @@ aoc2022-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# AoC people asked not to share inputs
+/data/
