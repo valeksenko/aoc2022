@@ -1,6 +1,6 @@
 defmodule AoC2022.Day05.Part2 do
   @moduledoc """
-    @see https://adventofcode.com/2022/day/5
+    @see https://adventofcode.com/2022/day/5#part2
   """
   import AoC2022.Day05.Parser
 
