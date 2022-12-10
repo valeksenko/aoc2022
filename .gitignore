@@ -26,4 +26,4 @@ aoc2022-*.tar
 /tmp/
 
 # AoC people asked not to share inputs
-/data/
+/data/my/

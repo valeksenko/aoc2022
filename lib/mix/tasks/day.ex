@@ -10,7 +10,7 @@ defmodule Mix.Tasks.Day do
     module =
       Module.safe_concat(~w[ Elixir AoC2022 Day#{String.pad_leading(day, 2, "0")} Part#{part} ])
 
-    case File.read("data/day#{String.pad_leading(day, 2, "0")}.txt") do
+    case File.read("data/my/day#{String.pad_leading(day, 2, "0")}.txt") do
       {:ok, content} ->
         apply(module, :run, [to_content(day, content)])
 

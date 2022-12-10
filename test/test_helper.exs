@@ -1,6 +1,6 @@
 defmodule TestHelper do
   def read_example_file(name) do
-    File.read!("data/examples/#{name}.txt")
+    File.read!("data/test/#{name}.txt")
   end
 
   def read_example(name, trim \\ true) do
