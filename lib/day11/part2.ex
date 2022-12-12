@@ -23,7 +23,7 @@ defmodule AoC2022.Day11.Part2 do
 
   defp with_modulo(monkeys) do
     {
-      monkeys |> Map.values() |> Enum.map(&(&1.condition)) |> Enum.product(),
+      monkeys |> Map.values() |> Enum.map(& &1.condition) |> Enum.product(),
       monkeys
     }
   end
@@ -31,7 +31,9 @@ defmodule AoC2022.Day11.Part2 do
   defp do_round({modulo, monkeys}) do
     {
       modulo,
-      Enum.reduce(0..(map_size(monkeys) - 1), monkeys, fn i, m -> turn(Map.fetch!(m, i), m, modulo) end)
+      Enum.reduce(0..(map_size(monkeys) - 1), monkeys, fn i, m ->
+        turn(Map.fetch!(m, i), m, modulo)
+      end)
     }
   end
 
