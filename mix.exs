@@ -22,6 +22,7 @@ defmodule Aoc2022.MixProject do
   defp deps do
     [
       {:nimble_parsec, "~> 1.2.3"},
+      {:json, "~> 1.4.1"},
       {:eastar, "~> 0.5.1"}
     ]
   end
