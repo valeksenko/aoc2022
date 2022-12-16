@@ -5,6 +5,6 @@ defmodule AoC2022.Day15.Part1Test do
   import TestHelper
 
   test "runs for sample input" do
-    assert 35 == run(read_example(:day15))
+    assert 26 == count(read_example(:day15), 10)
   end
 end
