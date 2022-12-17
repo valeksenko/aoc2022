@@ -18,7 +18,7 @@ defmodule AoC2022.Day15.Part2 do
     Stream.flat_map(
       0..limit,
       fn x ->
-        Stream.flat_map(1..limit, fn y -> [{x, y}] end)
+        Stream.flat_map(0..limit, fn y -> [{x, y}] end)
       end
     )
     |> Stream.drop_while(&in_range?(sensors, &1))
