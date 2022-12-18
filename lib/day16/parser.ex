@@ -32,8 +32,9 @@ defmodule AoC2022.Day16.Parser do
     data
     |> Enum.map(&parse/1)
     |> Enum.reduce(%{}, &to_pipe/2)
-    |> IO.inspect
+    |> IO.inspect()
   end
 
-  defp to_pipe({:ok, [valve, rate, valves], "", _, _, _}, pipes), do: Map.put(pipes, valve, {rate, valves})
+  defp to_pipe({:ok, [valve, rate, valves], "", _, _, _}, pipes),
+    do: Map.put(pipes, valve, {rate, valves})
 end
