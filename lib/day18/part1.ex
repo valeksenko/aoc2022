@@ -27,7 +27,7 @@ defmodule AoC2022.Day18.Part1 do
   defp connected?({x, y, z1}, {x, y, z2}), do: abs(z1 - z2) == 1
   defp connected?({x, y1, z}, {x, y2, z}), do: abs(y1 - y2) == 1
   defp connected?({x1, y, z}, {x2, y, z}), do: abs(x1 - x2) == 1
-  defp connected?(x, y), do: false
+  defp connected?(_, _), do: false
 
   defp parse(input) do
     input
