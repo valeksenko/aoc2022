@@ -15,7 +15,7 @@ defmodule AoC2022.Day21.Part1 do
     |> (fn monkeys -> shout(monkeys[@root], monkeys) end).()
   end
 
-  defp shout({:number, num}, monkeys), do: num
+  defp shout({:number, num}, _), do: num
 
   defp shout({:op, op, m1, m2}, monkeys) do
     with num1 <- shout(monkeys[m1], monkeys),
