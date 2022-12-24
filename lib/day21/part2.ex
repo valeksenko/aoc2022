@@ -14,11 +14,10 @@ defmodule AoC2022.Day21.Part2 do
     data
     |> instructions_parser()
     |> human_number()
-    |> elem(1)
   end
 
   def human_number(monkeys) do
-    with {:op, op, m1, m2} <- monkeys[@root] do
+    with {:op, _, m1, m2} <- monkeys[@root] do
       case shout(monkeys[m1], m1, monkeys) do
         :defer -> shout(monkeys[m2], m2, monkeys) |> get_human(m1, monkeys[m1], monkeys)
         num -> get_human(num, m2, monkeys[m2], monkeys)
@@ -26,21 +25,45 @@ defmodule AoC2022.Day21.Part2 do
     end
   end
 
-  defp get_human(target, @human, _, _), do: {:found, target}
+  defp get_human(target, @human, _, _), do: target
 
-  # defp get_human(_, {:number, num}, _, _), do: {:search, num}
+  defp get_human(_, _, {:number, num}, _), do: num
 
-  # def get_human(target, _, {:op, op, m1, m2}, monkeys) do
-  #   with num1 <- get_human(target, monkeys[m1], m1, monkeys),
-  #        num2 <- get_human(target, monkeys[m2], m2, monkeys),
-  #        do: defer_op(op, num1, num2, target)
-  # end
+  defp get_human(target, _, {:op, op, m1, m2}, monkeys) do
+    with num1 <- shout(monkeys[m1], m1, monkeys),
+         num2 <- shout(monkeys[m2], m2, monkeys),
+         do: defer_op(op, {m1, num1}, {m2, num2}, target, monkeys)
+  end
+
+  defp defer_op("+", {m1, :defer}, {_, n2}, target, monkeys),
+    do: get_human(target - n2, m1, monkeys[m1], monkeys)
+
+  defp defer_op("+", {_, n1}, {m2, :defer}, target, monkeys),
+    do: get_human(target - n1, m2, monkeys[m2], monkeys)
+
+  defp defer_op("-", {m1, :defer}, {_, n2}, target, monkeys),
+    do: get_human(target + n2, m1, monkeys[m1], monkeys)
+
+  defp defer_op("-", {_, n1}, {m2, :defer}, target, monkeys),
+    do: get_human(n1 - target, m2, monkeys[m2], monkeys)
+
+  defp defer_op("*", {m1, :defer}, {_, n2}, target, monkeys),
+    do: get_human(target / n2, m1, monkeys[m1], monkeys)
+
+  defp defer_op("*", {_, n1}, {m2, :defer}, target, monkeys),
+    do: get_human(target / n1, m2, monkeys[m2], monkeys)
+
+  defp defer_op("/", {m1, :defer}, {_, n2}, target, monkeys),
+    do: get_human(target * n2, m1, monkeys[m1], monkeys)
+
+  defp defer_op("/", {_, n1}, {m2, :defer}, target, monkeys),
+    do: get_human(n1 / target, m2, monkeys[m2], monkeys)
 
   defp shout(_, @human, _), do: :defer
 
   defp shout({:number, num}, _, _), do: num
 
-  defp shout({:op, op, m1, m2}, monkey, monkeys) do
+  defp shout({:op, op, m1, m2}, _, monkeys) do
     with num1 <- shout(monkeys[m1], m1, monkeys),
          num2 <- shout(monkeys[m2], m2, monkeys),
          do: do_op(op, num1, num2)
