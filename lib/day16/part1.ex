@@ -14,7 +14,6 @@ defmodule AoC2022.Day16.Part1 do
     data
     |> pipe_parser()
     |> pressures()
-    |> IO.inspect()
     |> Enum.map(&elem(&1, 0))
     |> Enum.max()
   end
@@ -30,11 +29,13 @@ defmodule AoC2022.Day16.Part1 do
   defp visit(pipes, visits) do
     visits
     |> Enum.flat_map(&check_valve(pipes, &1))
+    |> prune()
+  end
+
+  defp prune(visits) do
+    visits
+    |> Enum.reject(fn {pressure, _, time, _} -> pressure == 0 && time < @time - 2 end)
     |> Enum.uniq()
-    |> (fn x ->
-          IO.inspect(length(x))
-          x
-        end).()
   end
 
   defp has_time?({_, _, time, _}), do: time > 0
@@ -43,8 +44,6 @@ defmodule AoC2022.Day16.Part1 do
     pipes[valve]
     |> elem(1)
     |> Enum.flat_map(fn v -> next(v, pipes[v], time - 1, pressure, opened) end)
-
-    # |> IO.inspect(label: "#{valve}:#{pressure}:#{time}")
   end
 
   defp next(valve, _, time, pressure, opened) when time < 1, do: [{pressure, valve, 0, opened}]
