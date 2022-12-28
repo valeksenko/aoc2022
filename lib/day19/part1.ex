@@ -1,8 +1,8 @@
 defmodule AoC2022.Day19.Part1 do
   @moduledoc """
-    @see https://adventofcode.com/2022/day/19
+    @see https://adventofcode.com/2022/minute/19
   """
-  @days 24
+  @minutes 24
 
   @behaviour AoC2022.Day
 
@@ -26,9 +26,12 @@ defmodule AoC2022.Day19.Part1 do
   end
 
   defp collect_geodes(blueprint) do
-    {Map.from_keys(@materials, 0), %{@ore => 1}}
-    |> Stream.iterate(&daily(&1, blueprint))
-    |> Stream.drop(@days)
+    {
+      %{@geode => 0, @obsidian => 0, @clay => 0, @ore => 1},
+      Map.from_keys(@materials, 0)
+    }
+    |> Stream.iterate(&collect_geod(&1, blueprint))
+    |> Stream.drop(@minutes)
     |> Enum.take(1)
     |> hd()
     |> IO.inspect(label: "result")
@@ -36,44 +39,80 @@ defmodule AoC2022.Day19.Part1 do
     |> Map.get(@geode)
   end
 
-  defp daily({collected, robots}, blueprint) do
-    with {reminder, new_robots} <-
-           make_robots({collected, robots}, [@geode, @obsidian, @clay, @ore], blueprint),
-         do: {collect_materials(reminder, robots), new_robots}
+  defp collect_geod({robots, collected}, blueprint) do
+    with {made, leftovers} <- make_robots(@geode, 1, blueprint, robots, collected)
+    do
+      {
+        made,
+        collect_materials(leftovers, robots),
+      } |> IO.inspect
+    end
+  end
+
+  defp make_robots(_, 0, _, robots, collected), do: {robots, collected}
+  
+  # defp make_robots(material, amount, blueprint, robots, collected) do
+  #   with possible <- possilbe_makes(blueprint[material], amount, collected)
+  #   do
+  #     blueprint[material]
+  #     |> Enum.reject(&enough_materials?(&1, material, possible, collected))
+  #     |> Enum.reduce(
+  #       make_robot(blueprint, material, possible, robots, collected),
+  #       fn {m, a}, {r, c} -> make_robots(m, a * (amount - possible), blueprint, r, c) end
+  #     )
+  #   end
+  # end
+
+  defp make_robots(material, amount, blueprint, robots, collected) do
+    with possible <- possilbe_makes(blueprint[material], amount, collected),
+      made <- make_robot(blueprint, material, possible, robots, collected)
+    do
+      if material == @ore,
+        do: made,
+        else: Enum.reduce(
+          blueprint[material],
+          made,
+          fn {m, a}, {r, c} -> make_robots(m, a * (amount - possible), blueprint, r, c) end
+        )
+    end
+  end
+
+  defp possilbe_makes(required, amount, collected) do
+    required
+    |> Enum.map(&max_makes(&1, amount, collected))
+    |> Enum.min()
+  end
+
+  # defp enough_materials?(_, @ore, _, _), do: true
+  # defp enough_materials?(required, _, amount, collected), do: max_makes(required, amount, collected) == required
+
+  defp max_makes({material, amount}, required, collected) do
+    collected
+    |> Map.get(material, 0)
+    |> div(amount)
+    |> min(required)
+  end
+
+  defp make_robot(blueprint, material, amount, robots, collected) do
+    {
+      Map.update(robots, material, amount, &(&1 + amount)),
+      Enum.reduce(
+        blueprint[material],
+        collected,
+        fn {m, required}, c -> Map.update!(c, m, &(&1 - amount * required)) end
+      )
+    }
   end
 
   defp collect_materials(collected, robots),
     do:
-      Enum.reduce(@materials, collected, fn i, c ->
-        Map.update!(c, i, &(&1 + Map.get(robots, i, 0)))
-      end)
-
-  defp make_robots({collected, robots}, required, blueprint) do
-    material = hd(required)
-
-    if enough_for_robot?(required, collected),
-      do:
-        {collected, robots}
-        |> make_robot(material, blueprint[material])
-        |> make_robots(material, blueprint)
-        |> IO.inspect(label: "#{material} -- #{inspect(collected)}"),
-      else: {collected, robots}
-  end
-
-  defp enough_for_robot?(required, collected) do
-    required
-    |> Enum.with_index()
-    |> Enum.all?(fn {m, i} -> collected[i] >= m end)
-  end
-
-  defp make_robot({collected, robots}, material, required) do
-    {
-      required
-      |> Enum.with_index()
-      |> Enum.reduce(collected, fn {m, i}, c -> Map.update!(c, i, &(&1 - m)) end),
-      Map.update(robots, material, 1, &(&1 + 1))
-    }
-  end
+      Enum.reduce(
+        @materials,
+        collected,
+        fn m, c ->
+          Map.update!(c, m, &(&1 + robots[m]))
+        end
+      )
 
   defp parse(input) do
     input
@@ -86,10 +125,10 @@ defmodule AoC2022.Day19.Part1 do
       do: {
         id,
         %{
-          @ore => [0, 0, 0, ore_ore],
-          @clay => [0, 0, 0, clay_ore],
-          @obsidian => [0, 0, obsidian_clay, obsidian_ore],
-          @geode => [0, geode_obsidian, 0, geode_ore]
+          @ore => %{@ore => ore_ore},
+          @clay => %{@ore => clay_ore},
+          @obsidian => %{@clay => obsidian_clay, @ore => obsidian_ore},
+          @geode => %{@obsidian => geode_obsidian, @ore => geode_ore}
         }
       }
 end
