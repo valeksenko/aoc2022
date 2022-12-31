@@ -6,10 +6,10 @@ defmodule AoC2022.Day19.Part1 do
 
   @behaviour AoC2022.Day
 
-  @geode 0
-  @obsidian 1
-  @clay 2
-  @ore 3
+  @geode 1
+  @obsidian 7
+  @clay 19
+  @ore 31
 
   @materials [@geode, @obsidian, @clay, @ore]
 
@@ -26,82 +26,88 @@ defmodule AoC2022.Day19.Part1 do
   end
 
   defp collect_geodes(blueprint) do
-    {
-      %{@geode => 0, @obsidian => 0, @clay => 0, @ore => 1},
-      Map.from_keys(@materials, 0)
-    }
-    |> Stream.iterate(&collect_geod(&1, blueprint))
-    |> Stream.drop(@minutes)
-    |> Enum.take(1)
-    |> hd()
+    lowest_score(blueprint)
     |> IO.inspect(label: "result")
-    |> elem(0)
+    |> List.last()
+    |> elem(1)
     |> Map.get(@geode)
   end
 
-  defp collect_geod({robots, collected}, blueprint) do
-    with {made, leftovers} <- make_robots(@geode, 1, blueprint, robots, collected)
+  defp lowest_score(blueprint) do
+    with cache <- :ets.new(:cache, [:set, :protected])
     do
-      {
-        made,
-        collect_materials(leftovers, robots),
-      } |> IO.inspect
-    end
-  end
-
-  defp make_robots(_, 0, _, robots, collected), do: {robots, collected}
-  
-  # defp make_robots(material, amount, blueprint, robots, collected) do
-  #   with possible <- possilbe_makes(blueprint[material], amount, collected)
-  #   do
-  #     blueprint[material]
-  #     |> Enum.reject(&enough_materials?(&1, material, possible, collected))
-  #     |> Enum.reduce(
-  #       make_robot(blueprint, material, possible, robots, collected),
-  #       fn {m, a}, {r, c} -> make_robots(m, a * (amount - possible), blueprint, r, c) end
-  #     )
-  #   end
-  # end
-
-  defp make_robots(material, amount, blueprint, robots, collected) do
-    with possible <- possilbe_makes(blueprint[material], amount, collected),
-      made <- make_robot(blueprint, material, possible, robots, collected)
-    do
-      if material == @ore,
-        do: made,
-        else: Enum.reduce(
-          blueprint[material],
-          made,
-          fn {m, a}, {r, c} -> make_robots(m, a * (amount - possible), blueprint, r, c) end
-        )
-    end
-  end
-
-  defp possilbe_makes(required, amount, collected) do
-    required
-    |> Enum.map(&max_makes(&1, amount, collected))
-    |> Enum.min()
-  end
-
-  # defp enough_materials?(_, @ore, _, _), do: true
-  # defp enough_materials?(required, _, amount, collected), do: max_makes(required, amount, collected) == required
-
-  defp max_makes({material, amount}, required, collected) do
-    collected
-    |> Map.get(material, 0)
-    |> div(amount)
-    |> min(required)
-  end
-
-  defp make_robot(blueprint, material, amount, robots, collected) do
-    {
-      Map.update(robots, material, amount, &(&1 + amount)),
-      Enum.reduce(
-        blueprint[material],
-        collected,
-        fn {m, required}, c -> Map.update!(c, m, &(&1 - amount * required)) end
+      Astar.astar(
+        {
+          fn s -> makes(s, blueprint, cache) end,
+          fn {_, r1, c1}, {_, r2, c2} -> 100 + (score(r2, 2) + score(c2, 0)) - (score(r1, 2) + score(c1, 0)) end,
+          #fn {_, r1, c1}, {_, r2, c2} -> ((score(r2, 2) + score(c2, 0)) - (score(r1, 2) + score(c1, 0))) |> IO.inspect(label: "#{inspect r2[@clay]}:#{inspect r2[@ore]} #{inspect c2[@clay]}:#{inspect c2[@ore]}") end,
+          fn _, _ -> 1 end
+        },
+        {
+          @minutes,
+          %{Map.from_keys(@materials, 0) | @ore => 1},
+          Map.from_keys(@materials, 0),
+        },
+        fn {time, _, _} -> time == 0 end
       )
-    }
+    end
+  end
+
+  defp score(map, adjuster) do
+    adjuster + (
+      map
+      |> Enum.map(&Tuple.product/1)
+      |> Enum.sum()
+    )
+  end
+
+  defp makes({time, robots, collected}, blueprint, cache) do
+    make_robots([{robots, collected}], blueprint, cache)
+    |> List.flatten()
+    |> Enum.uniq()
+    |> Enum.map(fn {made, leftovers} -> {time - 1, made, collect_materials(leftovers, robots)} end)
+    #|> (fn x -> IO.inspect(length(x), label: "makes #{time}"); x end).()
+  end
+
+  defp make_robots([latest | _] = made, blueprint, cache) do
+    case :ets.lookup(cache, latest) do
+      [] -> tap(
+        do_make_robots(made, blueprint, cache),
+        fn m -> :ets.insert(cache, {latest, m}) end
+      )
+      #[{_, cached}] -> IO.puts("cached #{inspect elem(latest, 0)[@clay]}:#{inspect elem(latest, 0)[@ore]} #{inspect elem(latest, 1)[@clay]}:#{inspect elem(latest, 1)[@ore]}"); cached
+      [{_, cached}] -> cached
+    end
+  end
+
+  defp do_make_robots([latest | _] = made, blueprint, cache) do
+    with batch <- Enum.map(@materials, &make_robot(&1, blueprint, latest)),
+         fresh <- Enum.reject(batch, &(&1 == latest))
+    do
+      if Enum.empty?(fresh),
+        #do: (IO.inspect(latest, label: "same"); made),
+        do: made,
+        #else: (IO.inspect(fresh, label: "new: #{inspect latest}"); Enum.map(fresh, &make_robots([&1 | made], blueprint, cache)))
+        else: Enum.map(fresh, &make_robots([&1 | made], blueprint, cache))
+    end
+  end
+
+  defp enough_materials?(required, collected) do
+    required
+    |> Enum.all?(fn {m, a} -> Map.get(collected, m, 0) >= a end)
+  end
+
+  defp make_robot(material, blueprint, {robots, collected}) do
+    if enough_materials?(blueprint[material], collected),
+      do: {
+          Map.update!(robots, material, &(&1 + 1)),
+          Enum.reduce(
+            blueprint[material],
+            collected,
+            fn {m, a}, c -> Map.update!(c, m, &(&1 - a)) end
+          )
+        },
+      else: {robots, collected}
   end
 
   defp collect_materials(collected, robots),
