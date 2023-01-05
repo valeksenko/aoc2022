@@ -34,19 +34,20 @@ defmodule AoC2022.Day19.Part1 do
   end
 
   defp lowest_score(blueprint) do
-    with cache <- :ets.new(:cache, [:set, :protected])
-    do
+    with cache <- :ets.new(:cache, [:set, :protected]) do
       Astar.astar(
         {
           fn s -> makes(s, blueprint, cache) end,
-          fn {_, r1, c1}, {_, r2, c2} -> 100 + (score(r2, 2) + score(c2, 0)) - (score(r1, 2) + score(c1, 0)) end,
-          #fn {_, r1, c1}, {_, r2, c2} -> ((score(r2, 2) + score(c2, 0)) - (score(r1, 2) + score(c1, 0))) |> IO.inspect(label: "#{inspect r2[@clay]}:#{inspect r2[@ore]} #{inspect c2[@clay]}:#{inspect c2[@ore]}") end,
+          fn {_, r1, c1}, {_, r2, c2} ->
+            100 + (score(r2, 2) + score(c2, 0)) - (score(r1, 2) + score(c1, 0))
+          end,
+          # fn {_, r1, c1}, {_, r2, c2} -> ((score(r2, 2) + score(c2, 0)) - (score(r1, 2) + score(c1, 0))) |> IO.inspect(label: "#{inspect r2[@clay]}:#{inspect r2[@ore]} #{inspect c2[@clay]}:#{inspect c2[@ore]}") end,
           fn _, _ -> 1 end
         },
         {
           @minutes,
           %{Map.from_keys(@materials, 0) | @ore => 1},
-          Map.from_keys(@materials, 0),
+          Map.from_keys(@materials, 0)
         },
         fn {time, _, _} -> time == 0 end
       )
@@ -54,11 +55,10 @@ defmodule AoC2022.Day19.Part1 do
   end
 
   defp score(map, adjuster) do
-    adjuster + (
-      map
-      |> Enum.map(&Tuple.product/1)
-      |> Enum.sum()
-    )
+    adjuster +
+      (map
+       |> Enum.map(&Tuple.product/1)
+       |> Enum.sum())
   end
 
   defp makes({time, robots, collected}, blueprint, cache) do
@@ -66,28 +66,31 @@ defmodule AoC2022.Day19.Part1 do
     |> List.flatten()
     |> Enum.uniq()
     |> Enum.map(fn {made, leftovers} -> {time - 1, made, collect_materials(leftovers, robots)} end)
-    #|> (fn x -> IO.inspect(length(x), label: "makes #{time}"); x end).()
+
+    # |> (fn x -> IO.inspect(length(x), label: "makes #{time}"); x end).()
   end
 
   defp make_robots([latest | _] = made, blueprint, cache) do
     case :ets.lookup(cache, latest) do
-      [] -> tap(
-        do_make_robots(made, blueprint, cache),
-        fn m -> :ets.insert(cache, {latest, m}) end
-      )
-      #[{_, cached}] -> IO.puts("cached #{inspect elem(latest, 0)[@clay]}:#{inspect elem(latest, 0)[@ore]} #{inspect elem(latest, 1)[@clay]}:#{inspect elem(latest, 1)[@ore]}"); cached
-      [{_, cached}] -> cached
+      [] ->
+        tap(
+          do_make_robots(made, blueprint, cache),
+          fn m -> :ets.insert(cache, {latest, m}) end
+        )
+
+      # [{_, cached}] -> IO.puts("cached #{inspect elem(latest, 0)[@clay]}:#{inspect elem(latest, 0)[@ore]} #{inspect elem(latest, 1)[@clay]}:#{inspect elem(latest, 1)[@ore]}"); cached
+      [{_, cached}] ->
+        cached
     end
   end
 
   defp do_make_robots([latest | _] = made, blueprint, cache) do
     with batch <- Enum.map(@materials, &make_robot(&1, blueprint, latest)),
-         fresh <- Enum.reject(batch, &(&1 == latest))
-    do
+         fresh <- Enum.reject(batch, &(&1 == latest)) do
       if Enum.empty?(fresh),
-        #do: (IO.inspect(latest, label: "same"); made),
+        # do: (IO.inspect(latest, label: "same"); made),
         do: made,
-        #else: (IO.inspect(fresh, label: "new: #{inspect latest}"); Enum.map(fresh, &make_robots([&1 | made], blueprint, cache)))
+        # else: (IO.inspect(fresh, label: "new: #{inspect latest}"); Enum.map(fresh, &make_robots([&1 | made], blueprint, cache)))
         else: Enum.map(fresh, &make_robots([&1 | made], blueprint, cache))
     end
   end
@@ -100,13 +103,13 @@ defmodule AoC2022.Day19.Part1 do
   defp make_robot(material, blueprint, {robots, collected}) do
     if enough_materials?(blueprint[material], collected),
       do: {
-          Map.update!(robots, material, &(&1 + 1)),
-          Enum.reduce(
-            blueprint[material],
-            collected,
-            fn {m, a}, c -> Map.update!(c, m, &(&1 - a)) end
-          )
-        },
+        Map.update!(robots, material, &(&1 + 1)),
+        Enum.reduce(
+          blueprint[material],
+          collected,
+          fn {m, a}, c -> Map.update!(c, m, &(&1 - a)) end
+        )
+      },
       else: {robots, collected}
   end
 

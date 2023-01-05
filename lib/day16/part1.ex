@@ -13,48 +13,53 @@ defmodule AoC2022.Day16.Part1 do
   def run(data) do
     data
     |> pipe_parser()
-    |> pressures()
-    |> Enum.map(&elem(&1, 0))
-    |> Enum.max()
+    |> find_path()
+    |> List.last()
+    |> elem(0)
   end
 
-  defp pressures(pipes) do
-    [{0, @start, @time, []}]
-    |> Stream.iterate(&visit(pipes, &1))
-    |> Stream.drop_while(fn v -> Enum.any?(v, &has_time?/1) end)
-    |> Enum.take(1)
-    |> hd()
+  defp find_path(pipes) do
+    nbs = fn state -> check_valve(state, pipes) end
+
+    max = pipes |> Enum.map(fn {_, {rate, _}} -> rate * @time end) |> Enum.sum()
+    cost = fn {p1, _, t1, _}, {p2, _, t2, _} -> max - (t2 * p2 - t1 * p1) end
+    estimated_cost = fn _, _ -> 1 end
+
+    Astar.astar(
+      {nbs, cost, estimated_cost},
+      {0, @start, @time, []},
+      fn {_, _, time, _} -> time == 1 end
+    )
   end
 
-  defp visit(pipes, visits) do
-    visits
-    |> Enum.flat_map(&check_valve(pipes, &1))
-    |> prune()
-  end
-
-  defp prune(visits) do
-    visits
-    |> Enum.reject(fn {pressure, _, time, _} -> pressure == 0 && time < @time - 2 end)
-    |> Enum.uniq()
-  end
-
-  defp has_time?({_, _, time, _}), do: time > 0
-
-  defp check_valve(pipes, {pressure, valve, time, opened}) do
+  defp check_valve({pressure, valve, time, opened}, pipes) do
     pipes[valve]
     |> elem(1)
-    |> Enum.flat_map(fn v -> next(v, pipes[v], time - 1, pressure, opened) end)
+    |> Enum.flat_map(fn v -> next(v, pipes[v], time, pressure, opened, pipes) end)
   end
 
-  defp next(valve, _, time, pressure, opened) when time < 1, do: [{pressure, valve, 0, opened}]
-  defp next(valve, {0, _}, time, pressure, opened), do: [{pressure, valve, time, opened}]
+  defp next(valve, _, time, pressure, opened, pipes) when time < 2,
+    do: [release_pressure({pressure, valve, time, opened}, pipes)]
 
-  defp next(valve, {rate, _}, time, pressure, opened) do
+  defp next(valve, {0, _}, time, pressure, opened, pipes),
+    do: [release_pressure({pressure, valve, time, opened}, pipes)]
+
+  defp next(valve, _, time, pressure, opened, pipes) do
     if valve in opened,
-      do: [{pressure, valve, time, opened}],
+      do: [release_pressure({pressure, valve, time, opened}, pipes)],
       else: [
-        {pressure + rate * (time - 1), valve, time - 1, [valve | opened]},
-        {pressure, valve, time, opened}
+        release_pressure({pressure, valve, time, opened}, pipes),
+        release_pressure({pressure, valve, time, opened}, pipes)
+        |> (fn {p, _, t, o} -> release_pressure({p, valve, t, [valve | o]}, pipes) end).()
       ]
+  end
+
+  defp release_pressure({pressure, valve, time, opened}, pipes) do
+    {
+      Enum.reduce(opened, pressure, fn v, p -> p + elem(pipes[v], 0) end),
+      valve,
+      time - 1,
+      opened
+    }
   end
 end
