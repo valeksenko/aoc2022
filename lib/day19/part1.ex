@@ -2,14 +2,14 @@ defmodule AoC2022.Day19.Part1 do
   @moduledoc """
     @see https://adventofcode.com/2022/minute/19
   """
-  @minutes 24
+  @minutes 10
 
   @behaviour AoC2022.Day
 
-  @geode 1
-  @obsidian 7
-  @clay 19
-  @ore 31
+  @geode 77
+  @obsidian 33
+  @clay 11
+  @ore 1
 
   @materials [@geode, @obsidian, @clay, @ore]
 
@@ -34,24 +34,26 @@ defmodule AoC2022.Day19.Part1 do
   end
 
   defp lowest_score(blueprint) do
-    with cache <- :ets.new(:cache, [:set, :protected]) do
-      Astar.astar(
-        {
-          fn s -> makes(s, blueprint, cache) end,
-          fn {_, r1, c1}, {_, r2, c2} ->
-            100 + (score(r2, 2) + score(c2, 0)) - (score(r1, 2) + score(c1, 0))
-          end,
-          # fn {_, r1, c1}, {_, r2, c2} -> ((score(r2, 2) + score(c2, 0)) - (score(r1, 2) + score(c1, 0))) |> IO.inspect(label: "#{inspect r2[@clay]}:#{inspect r2[@ore]} #{inspect c2[@clay]}:#{inspect c2[@ore]}") end,
-          fn _, _ -> 1 end
-        },
-        {
-          @minutes,
-          %{Map.from_keys(@materials, 0) | @ore => 1},
-          Map.from_keys(@materials, 0)
-        },
-        fn {time, _, _} -> time == 0 end
-      )
-    end
+    Astar.astar(
+      {
+        fn s -> makes(s, blueprint) end,
+        fn s, _ -> @minutes * @minutes - geodes(s) end,
+        fn {t, r, c}, _ ->
+          @minutes * @minutes - t * (score(r, 0) + score(c, 2))
+        end
+        # fn {t1, r1, c1}, {t2, r2, c2} ->
+        #   (@minutes * @minutes) - ((score(r2, 0) + score(c2, 2)) - (score(r1, 0) + score(c1, 2)))
+        # end,
+        # fn s, _ -> (@minutes * @minutes) - geodes(s) end
+        # fn _, _ -> 1 end
+      },
+      {
+        @minutes,
+        %{Map.from_keys(@materials, 0) | @ore => 1},
+        Map.from_keys(@materials, 0)
+      },
+      fn {time, _, _} -> time == 0 end
+    )
   end
 
   defp score(map, adjuster) do
@@ -61,37 +63,40 @@ defmodule AoC2022.Day19.Part1 do
        |> Enum.sum())
   end
 
-  defp makes({time, robots, collected}, blueprint, cache) do
-    make_robots([{robots, collected}], blueprint, cache)
-    |> List.flatten()
-    |> Enum.uniq()
+  defp makes({time, robots, collected}, blueprint) do
+    make_robots([{robots, collected}], @geode, blueprint)
+    |> prune(time)
     |> Enum.map(fn {made, leftovers} -> {time - 1, made, collect_materials(leftovers, robots)} end)
 
     # |> (fn x -> IO.inspect(length(x), label: "makes #{time}"); x end).()
   end
 
-  defp make_robots([latest | _] = made, blueprint, cache) do
-    case :ets.lookup(cache, latest) do
-      [] ->
-        tap(
-          do_make_robots(made, blueprint, cache),
-          fn m -> :ets.insert(cache, {latest, m}) end
-        )
-
-      # [{_, cached}] -> IO.puts("cached #{inspect elem(latest, 0)[@clay]}:#{inspect elem(latest, 0)[@ore]} #{inspect elem(latest, 1)[@clay]}:#{inspect elem(latest, 1)[@ore]}"); cached
-      [{_, cached}] ->
-        cached
-    end
+  defp prune(states, time) do
+    states
+    |> List.flatten()
+    |> Enum.uniq()
+    |> Enum.map(fn {r, c} -> {geodes({time, r, c}), {r, c}} end)
+    |> Enum.sort_by(&elem(&1, 0), :desc)
+    |> take_max()
+    |> Enum.map(&elem(&1, 1))
   end
 
-  defp do_make_robots([latest | _] = made, blueprint, cache) do
-    with batch <- Enum.map(@materials, &make_robot(&1, blueprint, latest)),
+  defp take_max([]), do: []
+  defp take_max([{g, s} | t]), do: [{g, s} | Enum.take_while(t, fn {g1, _} -> g1 == g end)]
+
+  defp geodes({time, robots, collected}) do
+    collected[@geode] * 3 * time + robots[@geode] * time
+  end
+
+  defp make_robots([latest | _] = made, material, blueprint) do
+    # TODO: handle recursive robots
+    with batch <- make_robot(material, blueprint, latest),
          fresh <- Enum.reject(batch, &(&1 == latest)) do
       if Enum.empty?(fresh),
         # do: (IO.inspect(latest, label: "same"); made),
         do: made,
         # else: (IO.inspect(fresh, label: "new: #{inspect latest}"); Enum.map(fresh, &make_robots([&1 | made], blueprint, cache)))
-        else: Enum.map(fresh, &make_robots([&1 | made], blueprint, cache))
+        else: Enum.map(fresh, &make_robots([&1 | made], blueprint))
     end
   end
 
